@@ -1,2 +1,5 @@
 stockfish
 chess
+sqlite3
+Pillow
+discord.py
