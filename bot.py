@@ -12,7 +12,6 @@ import random
 import stockfish
 from io import BytesIO
 
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 pieces_dir = os.path.join(current_dir, 'pieces')
 database_file = os.path.join(current_dir, 'games.db')
