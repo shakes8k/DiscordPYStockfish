@@ -5,12 +5,14 @@ from discord.utils import get
 import sqlite3
 import os
 import random
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import chess
 import chess.engine
 import random
 import stockfish
 from io import BytesIO
+from parsemove import parse_move
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 pieces_dir = os.path.join(current_dir, 'pieces')
@@ -35,7 +37,7 @@ async def create_database():
 # Call create_database function to ensure the table exists
 asyncio.run(create_database())
 
-bot = commands.Bot(command_prefix='', intents=intents) # Insert Preferred Bot Prefix
+bot = commands.Bot(command_prefix='', intents=intents, case_insensitive=True) # Insert Preferred Bot Prefix
 token = '' # Insert Bot Token or however you handle the bot Token
 
 games = ['Chess', 'With Neural Engine']
@@ -79,15 +81,23 @@ async def sfplay(ctx):
 
             # Check for stalemate
             if board.is_stalemate():
+                c = conn.cursor()
+                c.execute("DELETE FROM ongoing_games WHERE player_id = ?", (ctx.author.id,))
+                conn.commit()
+                conn.close()
                 await ctx.send("Stalemate. The game is a draw.")
                 return
 
             # Check for checkmate
             if board.is_checkmate():
+                c = conn.cursor()
+                c.execute("DELETE FROM ongoing_games WHERE player_id = ?", (ctx.author.id,))
+                conn.commit()
+                conn.close()
                 await ctx.send("Checkmate.")
                 return
 
-            await ctx.send("Your move (e.g., 'e2e4, g1f3, f1b5', 'quit' to end the game):")
+            await ctx.send("Your move (e.g., 'e2e4, e4, pawn e4', 'quit' to end the game):")
             message = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
             move_str = message.content.lower()
 
@@ -100,13 +110,10 @@ async def sfplay(ctx):
                 await ctx.send("Game ended. You quit the game.")
                 return
 
-            try:
-                move = chess.Move.from_uci(move_str)
-                if move in board.legal_moves:
-                    board.push(move)
-                else:
-                    await ctx.send("Invalid move.")
-            except ValueError:
+            move = parse_move(move_str, board)
+            if move is not None:
+                board.push(move)
+            else:
                 await ctx.send("Invalid move.")
         else:
             engine.set_fen_position(board.fen())
@@ -116,14 +123,14 @@ async def sfplay(ctx):
 
         # Check for stalemate
         if board.is_stalemate():
-            await ctx.send("Stalemate. The game is a draw.")
-            return
+            await ctx.send("Game is a draw. Stalemate.")
+            break
 
         # Check for checkmate
         if board.is_checkmate():
             await ctx.send("Checkmate.")
-            return
-    
+            break
+        
     # Game completed, delete the ongoing game from the database
     conn = sqlite3.connect(database_file)
     c = conn.cursor()
@@ -131,7 +138,6 @@ async def sfplay(ctx):
     conn.commit()
     conn.close()
     await ctx.send("Game over. Result: " + board.result())
-
 
 async def send_board_image(ctx, board):
     # Create a blank image for the board
@@ -170,11 +176,18 @@ async def send_board_image(ctx, board):
     image.save(temp_image_path)
 
     # Send the image as a message
-    with open(temp_image_path, 'rb') as fp:
-        file = discord.File(fp, 'board.png')
-        await ctx.send(file=file)
+    try:
+        with open(temp_image_path, 'rb') as fp:
+            file = discord.File(fp, 'board.png')
+            await ctx.send(file=file)
+    except Exception as e:
+        await ctx.send("An error occurred while sending the board image.")
 
     # Delete the temporary image file
-    os.remove(temp_image_path)
+    try:
+        os.remove(temp_image_path)
+    except Exception as e:
+        print(f"An error occurred while deleting the temporary image file: {str(e)}")
+
 
 bot.run(token)
