@@ -50,7 +50,7 @@ async def change_activity():
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name} ({bot.user.id})')
+    print(f'Logged in as {bot.user.name} ({bot.user.id}) Consider Reading Readme.MD before use.')
 
 @bot.command()
 async def sfplay(ctx):
