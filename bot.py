@@ -40,14 +40,6 @@ asyncio.run(create_database())
 bot = commands.Bot(command_prefix='', intents=intents, case_insensitive=True) # Insert Preferred Bot Prefix
 token = '' # Insert Bot Token or however you handle the bot Token
 
-games = ['Chess', 'With Neural Engine']
-
-async def change_activity():
-    while True:
-        game = random.choice(games)
-        await bot.change_presence(activity=discord.Game(name=game))
-        await asyncio.sleep(12 * 60 * 60) # 12 hours
-
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name} ({bot.user.id}) Consider Reading Readme.MD before use.')
