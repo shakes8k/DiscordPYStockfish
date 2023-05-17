@@ -54,6 +54,17 @@ async def on_ready():
 
 @bot.command()
 async def sfplay(ctx):
+    # Check if the user already has a game running
+    conn = sqlite3.connect(database_file)
+    c = conn.cursor()
+    c.execute("SELECT * FROM ongoing_games WHERE player_id = ?", (ctx.author.id,))
+    existing_game = c.fetchone()
+    conn.close()
+
+    if existing_game:
+        await ctx.send("You already have a game running.")
+        return
+    
     engine = stockfish.Stockfish('') # Path to Stockfish (Powerful Chess Engine). Stockfish 15.1 https://stockfishchess.org/. 64-bit Windows is recommend.
     await ctx.send("Do you want to play as black or white? (Type 'black' or 'white')")
     message = await bot.wait_for('message', check=lambda m: m.author == ctx.author and m.channel == ctx.channel)
